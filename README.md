@@ -175,3 +175,13 @@ Home is forwarded normally. Descriptor validation uses Linux `statx` (kernel 4.1
 and libc 2.28 or newer); on systems where it is unavailable the helper forwards
 Home. FIFO write success means the command was queued, not acknowledged by the
 launcher: an unresponsive launcher that keeps its FIFO open is not detected.
+
+### HDMI sources on Home
+
+The Launcher preference **HDMI sources on Home** retains recognized HDMI tiles
+already present in the native Home row, preserving their positions. Turning it
+off filters them out; missing ports are never inserted. Native Live TV behavior
+and the physical port order on the Sources page are unchanged. New installations
+default to off; earlier generated source lists preserve their previous choice.
+The choice is changed through a switch like Fix TizenTube. It persists and rolls
+back if rebuilding the catalog fails.
