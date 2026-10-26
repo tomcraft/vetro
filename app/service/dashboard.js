@@ -1616,7 +1616,7 @@ function renderDock(){
   return '<div class="quick-item" data-quick-item="'+key+'"><div><h3>'+label+'</h3><p>'+description+'</p><div class="quick-state">'+chip(d[key]?'On':'Off',d[key]?'on':'')+'</div></div>'+switchMarkup('data-dock-source-option="'+key+'"',!!d[key],dockBusy||!d.installed,label)+'</div>';
  }
  var sourceOptions=sourceOption('showHomeSources','HDMI sources on Home','Copies the HDMI tiles and their positions from Samsung Home.');
- sourceOptions+=sourceOption('useSourceImages','HDMI source images','Uses Samsung’s images for HDMI tiles on the Dock and Sources.');
+ sourceOptions+=sourceOption('useSourceImages','HDMI source images','Uses Samsung’s images or custom profile images for HDMI tiles on the Dock and Sources.');
  sourceOptions+=sourceOption('connectedSourcesOnly','Connected sources only','Sources lists TV and only the HDMI ports Samsung reports with a device plugged in. A port whose device is switched off, or one Samsung does not report at all, is left out until it shows as connected.');
  sourceOptions+=sourceOption('hideTvSource','Hide TV on Sources','Leaves TV out of Sources, for a TV without an antenna. The tuner and remapped keys still use it; with no other source, TV stays.');
  var idleHomeOn=d.closeIdleHome!==false;

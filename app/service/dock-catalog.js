@@ -76,6 +76,8 @@ var MIN_PACKAGES = 20;         // fewer package rows than this means the read fa
 var MAX_ENTRIES = 40;          // the dock refuses more
 var APP_ID = /^[A-Za-z0-9_.-]{1,120}$/;
 var ICON_FILE = /^(?:\/opt\/share\/webappservice\/apps_icon|\/opt\/usr\/apps|\/usr\/apps)\/[A-Za-z0-9_.\/-]{1,160}\.png$/;
+var SOURCE_ICON_ROOT = '/opt/usr/home/owner/share/vetro-source-icons/';
+var CUSTOM_SOURCE_ICON_FILE = /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,79}\.png$/;
 var VIEWER = 'org.tizen.tv-viewer';
 // Fix TizenTube: TizenTube is a sideloaded app that stands in for YouTube. Samsung's own YouTube
 // (a Cobalt process) has to be closed before TizenTube starts, and the tile borrows the icon
@@ -96,7 +98,10 @@ function shardTargetAppId(claimed, appId) {
     return null;
 }
 // The dock repeats this check, but the file is written here, so refuse a bad path here as well.
-function iconOk(p) { return ICON_FILE.test(p) && p.indexOf('..') < 0 && p.indexOf('//') < 0; }
+function iconOk(p) {
+    if (typeof p !== 'string' || p.indexOf('..') >= 0 || p.indexOf('//') >= 0) return false;
+    return ICON_FILE.test(p) || (p.indexOf(SOURCE_ICON_ROOT) === 0 && CUSTOM_SOURCE_ICON_FILE.test(p.slice(SOURCE_ICON_ROOT.length)));
+}
 // An input's picture: Samsung keeps the pictures of the devices it recognises (consoles, boxes) in canalysis' folder, on 6.0, 6.5 and
 // 9 alike (#297: they were refused, so HDMI source images never showed). Its device-type icons are SVG, which the launcher cannot draw.
 var SOURCE_ICON_FILE = /^\/usr\/share\/canalysis\/Icon\/[A-Za-z0-9_.\/-]{1,160}\.png$/;
@@ -240,17 +245,38 @@ function cleanLabel(text, fallback) {
     return s || fallback;
 }
 
-// Physical inputs share their identity with dashboard selection and remapping.
-// On a monitor the cache, rather than a four-HDMI TV template, decides which
-// ports exist. The native switch icon is independent of optional tile artwork.
+// Key profiles by physical HDMI port. With two profiles for a port, use Samsung's data for it.
+function sourceProfilesByPort(config) {
+    var byPort = {};
+    if (!config || config.version !== 1 || !config.profiles || typeof config.profiles !== 'object' || Array.isArray(config.profiles)) return byPort;
+    Object.keys(config.profiles).forEach(function (id) {
+        var profile = config.profiles[id];
+        if (!/^[a-z0-9_-]{1,40}$/.test(id) || !profile) return;
+        var type = profile.sourceType;
+        if (!Number.isInteger(type) || type < 13 || type > 16) return;
+        byPort[type] = byPort[type] === undefined ? profile : null;
+    });
+    return byPort;
+}
+
+// Use the physical inputs shared by dashboard selection and remapping. Profiles
+// add a name and artwork to an existing HDMI port without changing its identity.
 function sourceEntries(parsed, options) {
+    var byPort = sourceProfilesByPort(options && options.sourceProfiles);
     return inputSources.normalize(parsed.sources).map(function (source) {
+        var profile = byPort[source.sourceType], name = source.name;
+        if (profile && typeof profile.label === 'string') name = cleanLabel(profile.label, name);
         var useImages = options && options.useSourceImages === true && source.sourceType >= 13;
-        var icon = useImages && sourceIconOk(source.displayIcon) ? source.displayIcon : null;
-        // No picture of the recognised device: the generic one for its type, if the TV has it (the first that exists is taken in existing()).
-        var twins = useImages && !icon ? (source.displayTwins || []).filter(sourceIconOk) : [];
-        return {slug: source.slug, label: source.name, inputLabel: source.inputLabel,
-            appId: source.rowKey, icon: icon, iconTwins: twins.length ? twins : null, sourceIcon: source.sourceIcon, sourceIcons: source.sourceIcons, killFirst: null, key: source.rowKey, present: source.present};
+        var samsung = useImages && sourceIconOk(source.displayIcon) ? source.displayIcon : null;
+        var twins = useImages && !samsung ? (source.displayTwins || []).filter(sourceIconOk) : [];
+        var custom = useImages && profile && typeof profile.icon === 'string' ? SOURCE_ICON_ROOT + profile.icon : null;
+        if (!iconOk(custom)) custom = null;
+        var inputLabel = name === source.name ? source.inputLabel : name === source.label ? source.label
+            : cleanLabel(source.label + ' - ' + name, source.label);
+        var entry = {slug: source.slug, label: name, inputLabel: inputLabel, appId: source.rowKey,
+            icon: custom || samsung, iconTwins: twins.length ? twins : null, sourceIcon: source.sourceIcon, sourceIcons: source.sourceIcons, killFirst: null, key: source.rowKey, present: source.present};
+        if (custom && samsung) entry.altIcon = samsung;
+        return entry;
     });
 }
 
@@ -378,6 +404,7 @@ function build(parsed, options) {
         e.sourceIcon = source.sourceIcon;
         e.sourceIcons = source.sourceIcons;
         e.iconTwins = source.iconTwins;
+        if (source.altIcon) e.altIcon = source.altIcon;
         pool[source.key] = e; sourceTiles.push(e);
     });
     // The user's own row (Vetro's dock state, never Samsung's .appLayerCache): their order first, then whatever Samsung's row
@@ -461,7 +488,13 @@ function existing(execute, built) {
                 if (!(e.icon && ok[e.icon]) && ok[e.altIcon]) e.icon = e.altIcon;
                 delete e.altIcon;
             }
-            if (e.iconTwins) { if (!e.icon) e.icon = e.iconTwins.filter(function (icon) { return ok[icon]; })[0] || null; delete e.iconTwins; }
+            if (e.iconTwins) {
+                if (!e.icon || !ok[e.icon]) {
+                    var twin = e.iconTwins.filter(function (icon) { return ok[icon]; })[0];
+                    if (twin) e.icon = twin;
+                }
+                delete e.iconTwins;
+            }
             if (e.sourceIcons) { e.sourceIcon = e.sourceIcons.filter(function (icon) { return ok[icon]; })[0] || null; delete e.sourceIcons; }
             else if (e.sourceIcon && !ok[e.sourceIcon]) e.sourceIcon = null;
             if (e.icon && !ok[e.icon]) { built.skipped.push({item: e.slug, reason: 'Icon file missing; a generic icon is used'}); e.icon = null; }
@@ -489,5 +522,5 @@ function load(execute, options) {
     });
 }
 
-module.exports = {hbbtvLink: hbbtvLink, ROW_KEY: ROW_KEY, TV_STORE: TV_STORE, APP_STORES: APP_STORES, allAppsTsv: allAppsTsv, sourceEntries: sourceEntries, inputsTsv: inputsTsv, iconPathOk: iconOk, COBALT_YOUTUBE: COBALT_YOUTUBE, WRAPPER_YOUTUBE: WRAPPER_YOUTUBE, shardTargetAppId: shardTargetAppId, load: load, parse: parse, build: build, tsv: tsv, script: script, homeStoresScript: homeStoresScript, rowFromStores: rowFromStores, slugify: slugify, cleanLabel: cleanLabel};
+module.exports = {SOURCE_ICON_ROOT: SOURCE_ICON_ROOT, hbbtvLink: hbbtvLink, ROW_KEY: ROW_KEY, TV_STORE: TV_STORE, APP_STORES: APP_STORES, allAppsTsv: allAppsTsv, sourceEntries: sourceEntries, inputsTsv: inputsTsv, iconPathOk: iconOk, COBALT_YOUTUBE: COBALT_YOUTUBE, WRAPPER_YOUTUBE: WRAPPER_YOUTUBE, shardTargetAppId: shardTargetAppId, load: load, parse: parse, build: build, tsv: tsv, script: script, homeStoresScript: homeStoresScript, rowFromStores: rowFromStores, slugify: slugify, cleanLabel: cleanLabel};
 

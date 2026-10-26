@@ -124,6 +124,7 @@ function Dock(options) {
     this.appCheckedAt = null;     // this.now() of the last lookup of the custom launcher's app
     this.goneRounds = 0;
     this.inputsFile = options.inputsFile || path.join(path.dirname(this.appsFile), 'vetro-dock-inputs.tsv');
+    this.sourceProfilesFile = options.sourceProfilesFile || path.join(path.dirname(this.appsFile), 'vetro-source-profiles.json');
     this.allAppsFile = options.allAppsFile || path.join(path.dirname(this.appsFile), 'vetro-dock-allapps.tsv');
     // The one-time migration of the two source options reads both lists; it is read once, and only when a state lacks them.
     this.legacySources = null;
@@ -560,8 +561,13 @@ Dock.prototype.writeCatalog = function () {
 // What every read of the Home data is built with, from the saved state: one place, so no caller forgets a setting (a row saved from the
 // launcher that left the store choice out would put TV-Store back on a TV where the user chose Samsung's store).
 Dock.prototype.catalogOptions = function (state, row) {
-    return {fixTizenTube: state.fixTizenTube, showHomeSources: state.showHomeSources, useSourceImages: state.useSourceImages, connectedSourcesOnly: state.connectedSourcesOnly, hideTvSource: state.hideTvSource,
-        intercepted: this.shards ? this.shards.intercepted() : {}, row: row === undefined ? state.row : row, appStore: state.appStore};
+    var profiles = null;
+    try {
+        if (fs.statSync(this.sourceProfilesFile).size <= 16384) profiles = JSON.parse(fs.readFileSync(this.sourceProfilesFile, 'utf8'));
+    } catch (e) { /* absent or invalid: keep Samsung names and Samsung artwork */ }
+    return {fixTizenTube: state.fixTizenTube, showHomeSources: state.showHomeSources, useSourceImages: state.useSourceImages,
+        connectedSourcesOnly: state.connectedSourcesOnly, hideTvSource: state.hideTvSource,
+        sourceProfiles: profiles, intercepted: this.shards ? this.shards.intercepted() : {}, row: row === undefined ? state.row : row, appStore: state.appStore};
 };
 // Writes the three lists the launcher reads. Returns true when one of them is not what was there before.
 Dock.prototype.saveLists = function (c) {

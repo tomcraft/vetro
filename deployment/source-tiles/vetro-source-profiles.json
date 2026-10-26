@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "profiles": {
+    "ps5": {
+      "sourceType": 13,
+      "label": "PlayStation 5",
+      "icon": "ps5-logo.png"
+    },
+    "switch2": {
+      "sourceType": 14,
+      "label": "Nintendo Switch 2",
+      "icon": "switch-2-logo.png"
+    }
+  }
+}

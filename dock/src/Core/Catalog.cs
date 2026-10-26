@@ -142,6 +142,7 @@ namespace Launcher.Core
             // Samsung's pictures of the devices it recognises on an input (consoles, boxes): an HDMI tile with Samsung's images (#297).
             "/usr/share/canalysis/Icon/"
         };
+        private const string SourceIconRoot = "/opt/usr/home/owner/share/vetro-source-icons/";
 
         /// <summary>
         /// A PNG under one of the places the TV keeps app icons. The path is only ever opened as a
@@ -155,6 +156,11 @@ namespace Launcher.Core
             bool webp = s.EndsWith(".webp", StringComparison.Ordinal) && s.StartsWith(DevicePictureDir, StringComparison.Ordinal);
             if (!webp && !s.EndsWith(".png", StringComparison.Ordinal)) return false;
             if (s.Contains("..") || s.Contains("//")) return false;
+            if (s.StartsWith(SourceIconRoot, StringComparison.Ordinal))
+            {
+                string name = s.Substring(SourceIconRoot.Length, s.Length - SourceIconRoot.Length - 4);
+                return Chars(name, 80, true, true) && name[0] != '.';
+            }
             foreach (char c in s)
             {
                 bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.' || c == '/';

@@ -998,6 +998,11 @@ namespace Launcher.Tests
                 T.True(Catalog.ValidIconPath("/usr/apps/com.samsung.x/shared/res/a-b_c.png"), "system package icon accepted");
                 T.True(Catalog.ValidIconPath("/usr/share/canalysis/Icon/Launcher/2K/launcher_xbox360_n.png"), "Samsung's device picture of an input accepted");
                 T.True(!Catalog.ValidIconPath("/usr/share/canalysis/x.png"), "only canalysis' Icon folder");
+                T.True(Catalog.ValidIconPath("/opt/usr/home/owner/share/vetro-source-icons/ps5-logo.png"), "custom source icon accepted");
+                T.True(!Catalog.ValidIconPath("/opt/usr/home/owner/share/private.png"), "other owner files excluded");
+                T.True(!Catalog.ValidIconPath("/opt/usr/home/owner/share/vetro-source-icons/../private.png"), "custom icon cannot escape its folder");
+                T.True(!Catalog.ValidIconPath("/opt/usr/home/owner/share/vetro-source-icons/sub/icon.png"), "custom icons are flat filenames");
+                T.True(!Catalog.ValidIconPath("/opt/usr/home/owner/share/vetro-source-icons/.hidden.png"), "custom icons cannot have hidden names");
                 T.True(!Catalog.ValidIconPath("/etc/passwd"), "outside the icon places");
                 T.True(!Catalog.ValidIconPath("/opt/usr/apps/../../etc/x.png"), "no parent directories");
                 T.True(!Catalog.ValidIconPath("/opt/usr/apps/a b.png"), "no spaces");
