@@ -210,3 +210,12 @@ Home is forwarded normally. Descriptor validation uses Linux `statx` (kernel 4.1
 and libc 2.28 or newer); on systems where it is unavailable the helper forwards
 Home. FIFO write success means the command was queued, not acknowledged by the
 launcher: an unresponsive launcher that keeps its FIFO open is not detected.
+
+### Custom source profiles and artwork
+
+Custom source profiles can assign a label and PNG image to a physical HDMI port.
+The PNG files and profile JSON live in the user data directory, separately from
+the widget package. Missing or invalid custom files fall back to Samsung artwork
+when available, then to the generic source icon. Custom profiles never insert
+ports absent from the native Home row; their images follow the independent
+HDMI source images preference.
