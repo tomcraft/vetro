@@ -838,6 +838,9 @@ namespace Launcher.Tests
                 T.Eq(r.Entries[1].IconPath, null, "no icon column: the pre-made icon");
                 T.True(Catalog.ValidIconPath("/opt/usr/apps/pkg/shared/res/icon.png"), "package icon accepted");
                 T.True(Catalog.ValidIconPath("/usr/apps/com.samsung.x/shared/res/a-b_c.png"), "system package icon accepted");
+                T.True(Catalog.ValidIconPath("/opt/usr/home/owner/share/vetro-source-icons/ps5-logo.png"), "custom source icon accepted");
+                T.True(!Catalog.ValidIconPath("/opt/usr/home/owner/share/private.png"), "other owner files excluded");
+                T.True(!Catalog.ValidIconPath("/opt/usr/home/owner/share/vetro-source-icons/../private.png"), "custom icon cannot escape its folder");
                 T.True(!Catalog.ValidIconPath("/etc/passwd"), "outside the icon places");
                 T.True(!Catalog.ValidIconPath("/opt/usr/apps/../../etc/x.png"), "no parent directories");
                 T.True(!Catalog.ValidIconPath("/opt/usr/apps/a b.png"), "no spaces");
