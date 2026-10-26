@@ -103,7 +103,8 @@ namespace Launcher.Core
 
         private static readonly string[] IconRoots =
         {
-            "/opt/share/webappservice/apps_icon/", "/opt/usr/apps/", "/usr/apps/"
+            "/opt/share/webappservice/apps_icon/", "/opt/usr/apps/", "/usr/apps/",
+            "/opt/usr/home/owner/share/vetro-source-icons/"
         };
 
         /// <summary>

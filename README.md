@@ -193,3 +193,12 @@ on Home and Sources. Turning it off uses packaged generic icons. Source names,
 port order and the Home filtering preference stay unchanged. Fresh installations
 default to off; existing source artwork is preserved during migration. The option
 uses the same switch, persistence and rollback as the Home filter.
+
+### Custom source profiles and artwork
+
+Custom source profiles can assign a label and PNG image to a physical HDMI port.
+The PNG files and profile JSON live in the user data directory, separately from
+the widget package. Missing or invalid custom files fall back to Samsung artwork
+when available, then to the generic source icon. Custom profiles never insert
+ports absent from the native Home row; their images follow the independent
+HDMI source images preference.

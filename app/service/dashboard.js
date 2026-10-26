@@ -731,7 +731,7 @@ function renderDock(){
   return '<div class="quick-item" data-quick-item="'+key+'"><div><h3>'+label+'</h3><p>'+description+'</p><div class="quick-state">'+chip(d[key]?'On':'Off',d[key]?'on':'')+'</div></div>'+switchMarkup('data-dock-source-option="'+key+'"',!!d[key],dockBusy||!d.installed,label)+'</div>';
  }
  var sourceOptions=sourceOption('showHomeSources','HDMI sources on Home','Keep HDMI source tiles already present in Samsung’s Home row, in their original positions. Turn off to filter them out. The Sources page is unchanged.');
- sourceOptions+=sourceOption('useSourceImages','HDMI source images','Use Samsung source images on Home and Sources. Turn off for the generic source icon. Names and source order stay the same.');
+ sourceOptions+=sourceOption('useSourceImages','HDMI source images','Use Samsung source images or custom profile images on Home and Sources. Turn off for the generic source icon. Names and source order stay the same.');
  box.innerHTML='<div class="dock-layout">'+previewMarkup(d)+'<div class="quick-group">'+main+sourceOptions+fix+'</div></div>';
  setTimeout(fitPreview,0);
 }

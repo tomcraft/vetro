@@ -15,6 +15,7 @@ var ICON_ROOT = '/opt/share/webappservice/apps_icon/all/';
 var MAX_ENTRIES = 40;          // the dock refuses more
 var APP_ID = /^[A-Za-z0-9_.-]{1,120}$/;
 var ICON_FILE = /^(?:\/opt\/share\/webappservice\/apps_icon|\/opt\/usr\/apps|\/usr\/apps)\/[A-Za-z0-9_.\/-]{1,160}\.png$/;
+var SOURCE_ICON_ROOT = '/opt/usr/home/owner/share/vetro-source-icons/';
 var VIEWER = 'org.tizen.tv-viewer';
 // Fix TizenTube: TizenTube is a sideloaded app that stands in for YouTube. Samsung's own YouTube
 // (a Cobalt process) has to be closed before TizenTube starts, and the tile borrows the icon
@@ -22,7 +23,7 @@ var VIEWER = 'org.tizen.tv-viewer';
 var TIZENTUBE = /TizenTube/i;
 var COBALT_YOUTUBE = 'com.samsung.tv.cobalt-yt';
 // The dock repeats this check, but the file is written here, so refuse a bad path here as well.
-function iconOk(p) { return ICON_FILE.test(p) && p.indexOf('..') < 0 && p.indexOf('//') < 0; }
+function iconOk(p) { return typeof p === 'string' && (ICON_FILE.test(p) || p.indexOf(SOURCE_ICON_ROOT) === 0 && /^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,79}\.png$/.test(p.slice(SOURCE_ICON_ROOT.length))) && p.indexOf('..') < 0 && p.indexOf('//') < 0; }
 
 // Live TV entries in the Home row are not web apps. The icon comes from the package of the same
 // name when the TV has one; the dock draws its own generic one otherwise.
@@ -99,16 +100,28 @@ function cleanLabel(text, fallback) {
     return s || fallback;
 }
 
-// Sources retain their physical port identity and Samsung-provided names.
+// The port selects the input; a user profile supplies its name and artwork independently
+// of Samsung's detection (which may call a Switch 2 simply "Nintendo Switch").
 function sourceEntries(parsed, options) {
+    var profiles = options && options.sourceProfiles, byPort = {}, conflicts = {};
+    if (profiles && profiles.version === 1 && profiles.profiles && typeof profiles.profiles === 'object') {
+        Object.keys(profiles.profiles).forEach(function (id) {
+            var p = profiles.profiles[id];
+            if (!/^[a-z0-9_-]{1,40}$/.test(id) || !p || !Number.isInteger(p.sourceType) || p.sourceType < 13 || p.sourceType > 16) return;
+            if (byPort[p.sourceType]) conflicts[p.sourceType] = true;
+            byPort[p.sourceType] = p;
+        });
+    }
     return [0, 13, 14, 15, 16].map(function (type) {
         var key = type === 0 ? 'TV' : 'HDMI' + (type - 12), base = type === 0 ? 'TV' : 'HDMI ' + (type - 12);
-        var meta = (parsed.sources || {})[key] || {};
-        var name = cleanLabel(meta.EditName || meta.DetectedName, base);
+        var meta = (parsed.sources || {})[key] || {}, profile = !conflicts[type] && byPort[type];
+        var name = cleanLabel(profile && profile.label || meta.EditName || meta.DetectedName, base);
         var useImages = options && options.useSourceImages === true && type >= 13;
         var samsung = useImages ? [meta.LauncherUnfocusedIconPath, meta.IconPath, meta.OrgIconPath].filter(iconOk)[0] || null : null;
+        var custom = useImages && profile && typeof profile.icon === 'string' && iconOk(SOURCE_ICON_ROOT + profile.icon) ? SOURCE_ICON_ROOT + profile.icon : null;
         var entry = {slug: type === 0 ? 'in-tv' : 'in-hdmi' + (type - 12), label: name,
-            appId: 'source:' + type, icon: samsung, killFirst: null};
+            appId: 'source:' + type, icon: custom || samsung, killFirst: null};
+        if (custom && samsung) entry.altIcon = samsung;
         // The Sources page always keeps TV, HDMI1, HDMI2, HDMI3, HDMI4 order and port labels.
         entry.inputLabel = type === 0 || name === base ? base : cleanLabel(base + ' - ' + name, base);
         return entry;
@@ -224,4 +237,4 @@ function load(execute, options) {
     });
 }
 
-module.exports = {sourceEntries: sourceEntries, inputsTsv: inputsTsv, iconPathOk: iconOk, COBALT_YOUTUBE: COBALT_YOUTUBE, load: load, parse: parse, build: build, tsv: tsv, script: script, slugify: slugify, cleanLabel: cleanLabel};
+module.exports = {SOURCE_ICON_ROOT: SOURCE_ICON_ROOT,sourceEntries: sourceEntries, inputsTsv: inputsTsv, iconPathOk: iconOk, COBALT_YOUTUBE: COBALT_YOUTUBE, load: load, parse: parse, build: build, tsv: tsv, script: script, slugify: slugify, cleanLabel: cleanLabel};

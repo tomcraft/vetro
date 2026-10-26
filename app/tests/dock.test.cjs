@@ -251,6 +251,21 @@ function fixture(options) {
     assert.equal(f.dock.iconFile('evil'), null, 'a path outside the icon places is never read');
     assert.equal(f.dock.iconFile('net'), null, 'nor one with parent directories');
 
+    // Persistent console profiles feed both pages without changing the physical source order.
+    f = fixture({homeData: 'O|s/source.layer.hdmi@HDMI2\nO|s/source.layer.hdmi@HDMI1'});
+    fs.writeFileSync(f.dock.sourceProfilesFile, JSON.stringify({version: 1, profiles: {
+        switch2: {sourceType: 14, label: 'Nintendo Switch 2', icon: 'switch-2-logo.png'},
+        ps5: {sourceType: 13, label: 'PlayStation 5', icon: 'ps5-logo.png'}
+    }}));
+    f.dock.patchState({showHomeSources:true});
+    await f.dock.writeCatalog();
+    assert.deepEqual(f.dock.entries().slice(0, 2).map(e => e.source), [14, 13]);
+    assert.equal(f.dock.inputEntries()[1].label, 'HDMI 1 - PlayStation 5');
+    assert.equal(f.dock.inputEntries()[2].icon, null, 'source art is generic');
+    fs.writeFileSync(f.dock.sourceProfilesFile, '{broken');
+    await f.dock.writeCatalog();
+    assert.equal(f.dock.inputEntries()[2].label, 'HDMI 2', 'invalid profile file falls back without losing the inputs');
+
     // Source switches persist like other launcher options and revert failed changes.
     f = fixture();
     assert.equal(f.dock.readState().showHomeSources,false);

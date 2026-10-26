@@ -54,6 +54,7 @@ function Dock(options) {
     this.stateFile = options.stateFile || STATE_FILE;
     this.appsFile = options.appsFile || APPS_FILE;
     this.inputsFile = options.inputsFile || path.join(path.dirname(this.appsFile), 'vetro-dock-inputs.tsv');
+    this.sourceProfilesFile = options.sourceProfilesFile || path.join(path.dirname(this.appsFile), 'vetro-source-profiles.json');
     this.legacyHomeSources = legacySourceUsage(this.appsFile, false);
     this.legacySourceImages = legacySourceUsage(this.inputsFile, true);
     this.sleep = options.sleep || function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
@@ -213,10 +214,14 @@ Dock.prototype.stopLines = function () {
 
 Dock.prototype.writeCatalog = function () {
     var self = this;
+    var profiles = null;
+    try {
+        if (fs.statSync(this.sourceProfilesFile).size <= 16384) profiles = JSON.parse(fs.readFileSync(this.sourceProfilesFile, 'utf8'));
+    } catch (e) { /* absent or invalid: keep Samsung names and generic input icons */ }
     var state = this.readState();
     // Persist defaults/migration before generating lists, so a fresh preview cannot be mistaken for legacy data later.
     try { this.validateSourcePreferenceState(); this.patchState({showHomeSources: state.showHomeSources, useSourceImages: state.useSourceImages}); } catch (e) { return Promise.reject(e); }
-    return catalog.load(this.execute, {fixTizenTube: state.fixTizenTube, showHomeSources: state.showHomeSources, useSourceImages: state.useSourceImages}).then(function (c) {
+    return catalog.load(this.execute, {fixTizenTube: state.fixTizenTube, showHomeSources: state.showHomeSources, useSourceImages: state.useSourceImages, sourceProfiles: profiles}).then(function (c) {
         try { fs.writeFileSync(self.appsFile, c.tsv); fs.writeFileSync(self.inputsFile, c.inputsTsv); }
         catch (e) { throw new Error('The app list could not be saved: ' + e.message); }
         self.lastCatalog = {count: c.count, skipped: c.skipped, at: self.now()};
