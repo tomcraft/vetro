@@ -117,7 +117,7 @@ var DEF = {
  'glow.show':true,'glow.mode':'icon','glow.color':'#e2edff','glow.strength':0.44,'glow.spread':16,
  'focus.ring':2,'focus.ringColor':'#ffffff','focus.lift':4,
  'label.mode':'none','label.size':18,'label.weight':'400','label.color':'#ffffff','label.shadow':0.5,'label.case':'none','label.spacing':0,'label.font':'system','label.sub':false,'label.subColor':'#aab4c0',
- 'clock.show':false,'clock.size':26,'clock.opacity':0.7,'clock.fmt':'24',
+ 'clock.show':true,'clock.size':22,'clock.opacity':0.9,'clock.fmt':'24',
  'hint.show':true,'hint.text':'Source',
  'pills.mode':'stack','pills.w':232,'pills.h':48,'pills.gap':8,'pills.radius':24,'pills.style':'outline','pills.size':22,'pills.glyph':true,'pills.label1':'Settings','pills.label2':'Samsung Home','pills.color':'#ffffff',
  'motion.enter':'cascade','motion.duration':300,'motion.stagger':24,'motion.ease':'linear','motion.focus':300
@@ -250,7 +250,7 @@ function geo(c){
  if(m){if(pm==='stack'){pinW=pw;pinH=2*ph+pg}else if(pm==='row'){pinW=2*pw+pg;pinH=ph}else{pinW=2*icon+gap;pinH=icon}}
  var fixed=m?num(c,'layout.groupGap')+pinW:0,content=appsW+fixed;
  var maxPill=Math.min(num(c,'layout.maxW'),1808),pillW=Math.min(content+2*padX,maxPill),view=pillW-2*padX-fixed;
- var labelRow=(c['label.mode']==='focused'||c['clock.show'])?10+34+(c['label.sub']&&c['label.mode']==='focused'?22:0):(c['label.mode']==='all'?10+30+(c['label.sub']?20:0):0);
+ var labelRow=(c['label.mode']==='focused')?10+34+(c['label.sub']&&c['label.mode']==='focused'?22:0):(c['label.mode']==='all'?10+30+(c['label.sub']?20:0):0);
  var pillH=num(c,'layout.padTop')+fic+labelRow+num(c,'layout.padBottom');
  var al=c['layout.align'],px=al==='left'?56:al==='right'?1920-56-pillW:(1920-pillW)/2;
  var off=num(c,'layout.offset'),py=c['layout.position']==='top'?off:1080-off-pillH;
@@ -354,13 +354,13 @@ Stage.prototype.apply=function(first){
  });
  /* clock */
  var cs=num(c,'clock.size'),now=new Date(),hh=now.getHours(),mm=('0'+now.getMinutes()).slice(-2),ct=c['clock.fmt']==='12'?((hh%12)||12)+':'+mm+' '+(hh<12?'AM':'PM'):('0'+hh).slice(-2)+':'+mm;
- this.clock.style.cssText='font-size:'+cs+'px;color:'+c['label.color']+';opacity:'+num(c,'clock.opacity')+';font-family:'+fam+';line-height:34px;text-shadow:0 2px 6px rgba(0,0,0,'+num(c,'label.shadow')+')';this.clock.textContent=ct;
- var cw=this.clock.offsetWidth,cxr=g.px+g.pillW-g.padX-cw;this.clock.style.left=cxr+'px';this.clock.style.top=g.labelTop+'px';
- this.clock.style.display=(c['clock.show']&&(mode!=='all')&&(g.labelRow>0)&&(cxr>this.labX+this.labW+16))?'block':'none';
+ this.clock.style.cssText='font-size:'+cs+'px;color:'+c['label.color']+';opacity:'+num(c,'clock.opacity')+';font-family:'+fam+';height:40px;line-height:36px;padding:0 18px;border-radius:20px;background:'+rgba(c['shell.tint'],.96)+';border:2px solid '+rgba(c['shell.borderColor'],num(c,'shell.border'));this.clock.textContent=ct;
+ var cw=this.clock.offsetWidth,cxr=g.px+g.pillW-g.padX-cw;this.clock.style.left=cxr+'px';this.clock.style.top=(g.py-50)+'px';
+ this.clock.style.display=c['clock.show']?'block':'none';
  /* hint */
  var up=c['layout.position']==='top';this.hint.style.cssText='font-size:24px;color:'+c['label.color']+';opacity:'+(c['hint.show']?0.75:0)+';font-family:'+fam+';text-shadow:0 2px 6px rgba(0,0,0,'+num(c,'label.shadow')+')';
  this.hint.innerHTML=esc(c['hint.text'])+' <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:-1px;'+(up?'transform:rotate(180deg)':'')+'"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
- var hw=this.hint.offsetWidth;this.hint.style.left=(g.px+(g.pillW-hw)/2)+'px';this.hint.style.top=(up?g.py+g.pillH+10:g.py-46+4)+'px';
+ var hw=this.hint.offsetWidth;this.hint.style.left=Math.min(g.px+(g.pillW-hw)/2,c['clock.show']?cxr-16-hw:Infinity)+'px';this.hint.style.top=(up?g.py+g.pillH+10:g.py-46+4)+'px';
 };
 function esc(s){return String(s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]})}
 function pillStyle(c,light){
