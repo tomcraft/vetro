@@ -242,6 +242,20 @@ function chevron(dir) {
     };
 }
 
+// The standalone clock capsule shares the bar's tint and rim, without depending on the caption redesign.
+function clockCaption() {
+    const H = K.ClockCapsuleH, W = 2 * H, r = H / 2, tint = rgb(K.ShellColor), bc = rgb(K.ShellBorderColor);
+    return (px, py) => {
+        if (!inside(px, py, W, H, r, r, r, r)) return null;
+        let col = [tint[0], tint[1], tint[2], K.ClockCapsuleAlpha];
+        if (edgeDist(px, py, W, H, r, r, r, r) < K.ShellBorderW) col = over(col, [bc[0], bc[1], bc[2], K.ShellBorderAlpha]);
+        return col;
+    };
+}
+need('ClockCapsuleH', 'ClockCapsuleAlpha');
+renderPng('clock_caption', 2 * K.ClockCapsuleH, K.ClockCapsuleH, [0, 0, 0, 0], clockCaption());
+if (process.argv.includes('--clock-only')) process.exit(0);
+
 renderPng('chev_up', 24, 24, [0, 0, 0, 0], chevron(-1));
 renderPng('chev_down', 24, 24, [0, 0, 0, 0], chevron(1));
 

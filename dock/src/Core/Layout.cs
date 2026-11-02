@@ -26,8 +26,8 @@ namespace Launcher.Core
         public const int LabelGap = 10;
         public const int LabelH = 34;
         public const int PadBottom = 16;
-        /// <summary>Height of the name/clock row under the icons; none when the design shows neither.</summary>
-        public static readonly int LabelRow = Design.ShowLabels || Design.ShowClock ? LabelGap + LabelH : 0;
+        /// <summary>Height of the name row; the clock occupies the existing band above the bar.</summary>
+        public static readonly int LabelRow = Design.ShowLabels ? LabelGap + LabelH : 0;
         public const int Margin = 40;          // room for the bar's shadow on every side (also: pill bottom to screen bottom)
         public const int BottomGap = 0;        // window bottom to screen bottom
         public const int ScreenSideGap = 12;   // pill never closer than this to the screen edge
@@ -48,6 +48,9 @@ namespace Launcher.Core
         public const int PillGlowPad = 32;
         /// <summary>Smallest space kept between the label and the clock; with less, the clock is not drawn.</summary>
         public const int ClockGap = 16;
+        public const int ClockCapsuleH = 40;
+        public const int ClockPadX = 18;
+        public const int ClockTopGap = 10;
         // Room for the navigation hint ("Input" above the apps, "Back" below the inputs): HintH is the
         // whole band, the capsule inside it is CapsuleH tall and HintH - CapsuleH away from the pill.
         public const int HintH = 46;
@@ -284,6 +287,12 @@ namespace Launcher.Core
 
         /// <summary>Window-relative right edge of the clock, on the label row.</summary>
         public int ClockRight { get { return Left + PillW - PadX; } }
+        public bool ShowClock { get { return Design.ShowClock && !Raised; } }
+        public int ClockTop(int slide) { return Top - ClockTopGap - ClockCapsuleH + slide; }
+        public int ClockHintLeft(int hintW, int clockW)
+        {
+            return ShowClock ? Math.Min(HintLeft(hintW), ClockRight - clockW - ClockGap - hintW) : HintLeft(hintW);
+        }
 
         /// <summary>
         /// The label always belongs under its icon, so the clock is the one that gives way: it is drawn

@@ -372,6 +372,24 @@ namespace Launcher.Tests
                 T.Eq(l.GlowBox(3, 0f, 0).X, l.GlowBox(3, 0f, 0).X, "glow box depends only on the item");
             });
 
+            T.Run("layout: clock capsule stays above Apps without changing Sources", () =>
+            {
+                foreach (bool raised in new[] { false, true })
+                foreach (int n in new[] { 2, 5, 13, 30 })
+                {
+                    var l = new DockLayout(n, 1920, 1080, 0, raised, -1);
+                    T.Eq(l.ShowClock, Design.ShowClock && !raised, "clock is apps-only");
+                    T.Eq(DockLayout.LabelRow, Design.ShowLabels ? DockLayout.LabelGap + DockLayout.LabelH : 0, "no bottom row for clock");
+                    if (l.ShowClock)
+                    {
+                        T.True(l.ClockTop(0) >= 0, "clock stays in the window");
+                        T.True(l.ClockTop(0) + DockLayout.ClockCapsuleH < l.Top, "clock stays above icons");
+                        T.True(l.ClockHintLeft(110, 100) + 110 + DockLayout.ClockGap <= l.ClockRight - 100, "hint avoids clock");
+                    }
+                    else T.Eq(l.ClockHintLeft(110, 100), l.HintLeft(110), "Sources keeps its hint");
+                }
+            });
+
             T.Run("layout: highlight and label are never cut or crowd the pill edge", () =>
             {
                 foreach (int n in new[] { 2, 11, 30 })

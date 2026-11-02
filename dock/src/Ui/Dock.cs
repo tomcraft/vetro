@@ -45,6 +45,8 @@ namespace Launcher.Ui
         // Colour of each item's glow: the icon's dominant hue, or the design's own colour.
         private readonly int[] _glowRgb;
         private bool _hlRound, _hlRound2;      // which outline each glow object currently shows
+        private IntPtr _clockCap;
+        private int _clockTextDy;
         private int _clockW, _clockX = int.MinValue, _clockY = int.MinValue;
         private int _current = -1;
         private bool _clipSet;
@@ -124,13 +126,17 @@ namespace Launcher.Ui
                     Efl.evas_object_show(_label[k]);
                 }
 
-            if (Design.ShowClock)
+            if (_layout.ShowClock)
             {
+                _clockCap = NineSlice("clock_caption", DockLayout.ClockCapsuleH / 2, DockLayout.ClockCapsuleH / 2, 0, 0);
+                Efl.evas_object_color_set(_clockCap, 0, 0, 0, 0);
                 _clock = Efl.evas_object_text_add(_evas);
                 Efl.evas_object_text_font_set(_clock, Font, 22);
                 Efl.evas_object_text_text_set(_clock, "--:--");
-                _clockW = Efl.evas_object_text_horiz_advance_get(_clock);
-                SoftShadow(_clock);
+                _clockW = Efl.evas_object_text_horiz_advance_get(_clock) + 2 * DockLayout.ClockPadX;
+                Efl.evas_object_resize(_clockCap, _clockW, DockLayout.ClockCapsuleH);
+                _clockTextDy = (DockLayout.ClockCapsuleH - Efl.evas_object_text_vert_advance_get(_clock)) / 2 - 1;
+                Tint(_clock, 0);
                 Efl.evas_object_show(_clock);
             }
 
@@ -187,7 +193,7 @@ namespace Launcher.Ui
         /// </summary>
         public void SetVisible(bool visible)
         {
-            IntPtr[] top = { _shadow, _pill, _clip, _label[0], _label[1], _clock, _hintChev, _hintText };
+            IntPtr[] top = { _shadow, _pill, _clip, _label[0], _label[1], _clockCap, _clock, _hintChev, _hintText };
             foreach (IntPtr o in top)
             {
                 if (o == IntPtr.Zero) continue;
@@ -206,7 +212,8 @@ namespace Launcher.Ui
         {
             if (_clock == IntPtr.Zero) return;   // this design shows no clock
             Efl.evas_object_text_text_set(_clock, text);
-            _clockW = Efl.evas_object_text_horiz_advance_get(_clock);
+            _clockW = Efl.evas_object_text_horiz_advance_get(_clock) + 2 * DockLayout.ClockPadX;
+            Efl.evas_object_resize(_clockCap, _clockW, DockLayout.ClockCapsuleH);
             _clockX = int.MinValue;   // re-place on the next frame: the width may have changed
         }
 
@@ -455,19 +462,22 @@ namespace Launcher.Ui
             }
 
             if (Design.ShowLabels) ApplyLabels(c, slide, presence, scroll);
-            if (Design.ShowClock) ApplyClock(slide, presence);
+            if (_layout.ShowClock) ApplyClock(slide, presence);
             if (_hintText != IntPtr.Zero) ApplyHint(slide, presence);
         }
 
         private void ApplyHint(int slide, int presence)
         {
-            int y = _layout.HintTop(slide);
-            if (y != _hintY)
+            int y = _layout.HintTop(slide), x = _layout.ClockHintLeft(_hintW, _clockW);
+            if (y != _hintY || x != _hintX)
             {
+                _hintX = x;
                 _hintY = y;
                 Efl.evas_object_move(_hintText, _hintX, y + _hintTextDy);
                 Efl.evas_object_move(_hintChev, _hintX + _hintTextW + HintGap, y + (DockLayout.CapsuleH - HintChev) / 2);
             }
+            // On a very short bar the hint yields to the clock rather than overlapping it.
+            if (_layout.ShowClock && _hintX < _layout.Left + DockLayout.PadX) presence = 0;
             // Quieter than the label, like the clock: a signpost, not a headline.
             if (presence != _hintAlpha)
             {
@@ -481,16 +491,15 @@ namespace Launcher.Ui
         private void ApplyClock(int slide, int presence)
         {
             int x = _layout.ClockRight - _clockW;
-            int y = _layout.LabelTop(slide) + 3;
+            int y = _layout.ClockTop(slide);
             if (x != _clockX || y != _clockY)
             {
                 _clockX = x; _clockY = y;
-                Efl.evas_object_move(_clock, x, y);
+                Efl.evas_object_move(_clockCap, x, y);
+                Efl.evas_object_move(_clock, x + DockLayout.ClockPadX, y + _clockTextDy);
             }
-            // Quieter than the label: it is there to be glanced at, not read. It gives way to the label.
-            int ts = _fader.TargetSlot;
-            int a = _layout.ClockClear(_labelX[ts], _labelW[ts], _clockW) ? presence * 7 / 10 : 0;
-            if (a != _clockAlpha) { _clockAlpha = a; TintText(_clock, a); }
+            // The clock has its own capsule above the bar and stays visible while the apps page is open.
+            if (presence != _clockAlpha) { _clockAlpha = presence; Tint(_clockCap, presence); Tint(_clock, presence * 9 / 10); }
         }
 
         private void ApplyLabels(Controller c, int slide, int presence, float scroll)
