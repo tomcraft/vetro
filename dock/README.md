@@ -76,7 +76,7 @@ To change the look: edit `chosen.json` (or paste a new designer export there), u
 
 Not ported from the designer (the launcher cannot do them): blurred background behind the bar, label fonts, the
 brightness boost on a selected pill, and the desaturation of unselected icons. With the chosen design there are no
-name labels and no clock, so the label styling options are not carried either.
+name labels. The apps page shows a local HH:mm clock above the bar when there is room beside the navigation hint. Sources and All apps keep their layout. The label styling options are not carried.
 
 ## Build
 

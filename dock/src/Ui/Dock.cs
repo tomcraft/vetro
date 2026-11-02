@@ -51,6 +51,8 @@ namespace Launcher.Ui
         // Colour of each item's glow: the icon's dominant hue, or the design's own colour.
         private readonly int[] _glowRgb;
         private bool _hlRound, _hlRound2;      // which outline each glow object currently shows
+        private IntPtr _clockCap;
+        private int _clockTextDy;
         private int _clockW, _clockX = int.MinValue, _clockY = int.MinValue;
         private int _current = -1;
         private bool _clipSet;
@@ -146,13 +148,15 @@ namespace Launcher.Ui
                     Efl.evas_object_show(_label[k]);
                 }
 
-            if (Design.ShowClock)
+            if (_layout.ShowClock)
             {
+                _clockCap = NineSlice("clock_caption", DockLayout.ClockCapsuleH / 2);
+                Efl.evas_object_color_set(_clockCap, 0, 0, 0, 0);
                 _clock = Efl.evas_object_text_add(_evas);
                 Efl.evas_object_text_font_set(_clock, Font, 22);
-                Efl.evas_object_text_text_set(_clock, "--:--");
-                _clockW = Efl.evas_object_text_horiz_advance_get(_clock);
-                SoftShadow(_clock);
+                SetClock(DateTime.Now);
+                _clockTextDy = (DockLayout.ClockCapsuleH - Efl.evas_object_text_vert_advance_get(_clock)) / 2 - 1;
+                Tint(_clock, 0);
                 Efl.evas_object_show(_clock);
             }
 
@@ -298,7 +302,7 @@ namespace Launcher.Ui
         /// </summary>
         public void SetVisible(bool visible)
         {
-            var top = new List<IntPtr> { _rim, _pill, _clip, _label[0], _label[1], _clock };
+            var top = new List<IntPtr> { _rim, _pill, _clip, _label[0], _label[1], _clockCap, _clock };
             foreach (NavHint h in new[] { _hint, _hintBelow }) if (h != null) top.AddRange(h.Objects());
             foreach (IntPtr o in top)
             {
@@ -394,7 +398,7 @@ namespace Launcher.Ui
         /// <summary>Deletes every object of the page (the row was rebuilt with other tiles); the page is not used again.</summary>
         public void Destroy()
         {
-            var all = new List<IntPtr> { _rim, _pill, _highlight, _highlight2, _ring, _ring2, _divider, _label[0], _label[1], _clock, _appsClip, _clip };
+            var all = new List<IntPtr> { _rim, _pill, _highlight, _highlight2, _ring, _ring2, _divider, _label[0], _label[1], _clockCap, _clock, _appsClip, _clip };
             all.AddRange(_icon); all.AddRange(_initials);
             if (_badge != null) { all.AddRange(_badge); all.AddRange(_badgeBg); }
             foreach (NavHint h in new[] { _hint, _hintBelow }) if (h != null) all.AddRange(h.Objects());
@@ -408,11 +412,12 @@ namespace Launcher.Ui
             set { if (value != _current) { _current = value; _fader.Invalidate(); } }
         }
 
-        public void SetClock(string text)
+        public void SetClock(DateTime now)
         {
             if (_clock == IntPtr.Zero) return;   // this design shows no clock
-            Efl.evas_object_text_text_set(_clock, text);
-            _clockW = Efl.evas_object_text_horiz_advance_get(_clock);
+            Efl.evas_object_text_text_set(_clock, now.ToString("HH:mm"));
+            _clockW = Efl.evas_object_text_horiz_advance_get(_clock) + 2 * DockLayout.ClockPadX;
+            Efl.evas_object_resize(_clockCap, _clockW, DockLayout.ClockCapsuleH);
             _clockX = int.MinValue;   // re-place on the next frame: the width may have changed
         }
 
@@ -730,17 +735,22 @@ namespace Launcher.Ui
             }
 
             if (Design.ShowLabels) ApplyLabels(c, slide, presence, scroll);
-            if (Design.ShowClock) ApplyClock(slide, presence);
-            if (_hint != null && _hint.Parts.Count > 0) ApplyHint(_hint, _layout.HintTop(slide), presence);
-            if (_hintBelow != null && _hintBelow.Parts.Count > 0) ApplyHint(_hintBelow, _layout.HintBelowTop(slide), presence);
+            bool hasHint = _hint != null && _hint.Parts.Count > 0;
+            int hintLeft;
+            bool showClock = _layout.TryPlaceClock(hasHint ? _hint.W : 0, _clockW, out hintLeft);
+            if (_layout.ShowClock) ApplyClock(slide, showClock ? presence : 0);
+            if (hasHint) ApplyHint(_hint, hintLeft, _layout.HintTop(slide), presence);
+            if (_hintBelow != null && _hintBelow.Parts.Count > 0)
+                ApplyHint(_hintBelow, _layout.HintLeft(_hintBelow.W), _layout.HintBelowTop(slide), presence);
         }
 
-        private static void ApplyHint(NavHint h, int y, int presence)
+        private void ApplyHint(NavHint h, int left, int y, int presence)
         {
-            if (y != h.Y)
+            if (y != h.Y || left != h.X)
             {
+                h.X = left;
                 h.Y = y;
-                int x = h.X;
+                int x = left;
                 for (int i = 0; i < h.Parts.Count; i++)
                 {
                     HintPart p = h.Parts[i];
@@ -750,7 +760,7 @@ namespace Launcher.Ui
                 }
                 if (h.Chev != IntPtr.Zero) Efl.evas_object_move(h.Chev, x + HintGap, y + (DockLayout.CapsuleH - HintChev) / 2);
             }
-            // Quieter than the label, like the clock: a signpost, not a headline. The keys a little under the words, as on the cards.
+            // Keep the hint and its key symbols quieter than the tile label.
             if (presence != h.Alpha)
             {
                 h.Alpha = presence;
@@ -767,16 +777,14 @@ namespace Launcher.Ui
         private void ApplyClock(int slide, int presence)
         {
             int x = _layout.ClockRight - _clockW;
-            int y = _layout.LabelTop(slide) + 3;
+            int y = _layout.ClockTop(slide);
             if (x != _clockX || y != _clockY)
             {
                 _clockX = x; _clockY = y;
-                Efl.evas_object_move(_clock, x, y);
+                Efl.evas_object_move(_clockCap, x, y);
+                Efl.evas_object_move(_clock, x + DockLayout.ClockPadX, y + _clockTextDy);
             }
-            // Quieter than the label: it is there to be glanced at, not read. It gives way to the label.
-            int ts = _fader.TargetSlot;
-            int a = _layout.ClockClear(_labelX[ts], _labelW[ts], _clockW) ? presence * 7 / 10 : 0;
-            if (a != _clockAlpha) { _clockAlpha = a; TintText(_clock, a); }
+            if (presence != _clockAlpha) { _clockAlpha = presence; Tint(_clockCap, presence); Tint(_clock, presence * 9 / 10); }
         }
 
         private void ApplyLabels(Controller c, int slide, int presence, float scroll)

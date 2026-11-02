@@ -792,6 +792,7 @@ namespace Launcher
         private static void OpenTasks()
         {
             ProbeBegin("control center");
+            StopClock();
             float pop = Math.Min(_ctl.Presence, 0.55f);
             _ctl.Vanish();
             _dock.SetVisible(false);
@@ -852,6 +853,7 @@ namespace Launcher
             if (rise)
             {
                 _ctl.Rise(pop);
+                StartClock();
                 _dock.Apply(_ctl);
                 StartAnimator();
                 ResetIdle();
@@ -1442,21 +1444,15 @@ namespace Launcher
 
         // ------------------------------------------------------------------ clock
 
-        private static string ClockText() { return DateTime.Now.ToString("HH:mm"); }
-
         /// <summary>
-        /// Shows the time and arms one timer for the next minute change. It runs only while the dock
-        /// is on screen: nothing ticks while the dock is hidden.
+        /// Updates the apps clock and arms a timer for the next minute boundary while the dock pages are on screen.
         /// </summary>
         private static void StartClock()
         {
             if (!Design.ShowClock) return;   // no clock is drawn in this look: no timer for it either
-            string t = ClockText();
-            _appsDock.SetClock(t);
-            _inputsDock.SetClock(t);
-            _allDock.SetClock(t);
-            if (_clockTimer != IntPtr.Zero) Efl.ecore_timer_del(_clockTimer);
             DateTime now = DateTime.Now;
+            _appsDock.SetClock(now);
+            if (_clockTimer != IntPtr.Zero) Efl.ecore_timer_del(_clockTimer);
             double wait = 60.0 - now.Second - now.Millisecond / 1000.0 + 0.05;
             _clockTimer = Efl.ecore_timer_add(wait, ClockCb, IntPtr.Zero);
         }
@@ -1473,8 +1469,11 @@ namespace Launcher
             _clockTimer = IntPtr.Zero;   // returning 0 makes ecore free the timer
             try
             {
-                if (_ctl.IsActive) { StartClock(); _dock.Apply(_ctl); }
-                else if (_tasksOn && CardsActive) StartClock();
+                if (_ctl.IsActive)
+                {
+                    StartClock();
+                    if (_ctl == _appsCtl) _appsDock.Apply(_appsCtl);
+                }
             }
             catch (Exception ex) { Log("clock: " + ex.Message); }
             return 0;

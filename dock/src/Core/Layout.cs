@@ -26,8 +26,8 @@ namespace Launcher.Core
         public const int LabelGap = 10;
         public const int LabelH = 34;
         public const int PadBottom = 16;
-        /// <summary>Height of the name/clock row under the icons; none when the design shows neither.</summary>
-        public static readonly int LabelRow = Design.ShowLabels || Design.ShowClock ? LabelGap + LabelH : 0;
+        /// <summary>Height of the name row; the clock occupies the existing band above the bar.</summary>
+        public static readonly int LabelRow = Design.ShowLabels ? LabelGap + LabelH : 0;
         public const int Margin = 40;          // room for the focus glow and the rim on every side (also: pill bottom to screen bottom)
         public const int BottomGap = 0;        // window bottom to screen bottom
         public const int ScreenSideGap = 12;   // pill never closer than this to the screen edge
@@ -46,8 +46,11 @@ namespace Launcher.Core
         public const int PillItemGap = 8;
         /// <summary>Reach of the capsule glow around a focused pill (same spread as the icons' glow).</summary>
         public const int PillGlowPad = 32;
-        /// <summary>Smallest space kept between the label and the clock; with less, the clock is not drawn.</summary>
+        /// <summary>Smallest horizontal gap between the upper navigation hint and the clock.</summary>
         public const int ClockGap = 16;
+        public const int ClockCapsuleH = 40;
+        public const int ClockPadX = 18;
+        public const int ClockTopGap = 10;
         // Room for the navigation hint ("Input" above the apps, "Back" below the inputs): HintH is the
         // whole band, the capsule inside it is CapsuleH tall and HintH - CapsuleH away from the pill.
         public const int HintH = 46;
@@ -330,16 +333,20 @@ namespace Launcher.Core
             return b;
         }
 
-        /// <summary>Window-relative right edge of the clock, on the label row.</summary>
+        /// <summary>Window-relative right edge of the clock above the apps bar.</summary>
         public int ClockRight { get { return Left + PillW - PadX; } }
-
-        /// <summary>
-        /// The label always belongs under its icon, so the clock is the one that gives way: it is drawn
-        /// only while it keeps <see cref="ClockGap"/> pixels away from the label box.
-        /// </summary>
-        public bool ClockClear(int labelX, int labelW, int clockW)
+        public bool ShowClock { get { return Design.ShowClock && !Raised; } }
+        public int ClockTop(int slide) { return Top - ClockTopGap - ClockCapsuleH + slide; }
+        /// <summary>Shift the upper hint to make room for the clock. If both cannot fit, keep the hint centred.</summary>
+        public bool TryPlaceClock(int hintW, int clockW, out int hintLeft)
         {
-            return labelX + labelW + ClockGap <= ClockRight - clockW;
+            hintLeft = HintLeft(hintW);
+            if (!ShowClock) return false;
+            int left = ClockRight - clockW;
+            if (hintW > 0) left -= ClockGap + hintW;
+            if (left < ViewLeft) return false;
+            if (hintW > 0) hintLeft = Math.Min(hintLeft, left);
+            return true;
         }
 
         /// <summary>Window-relative x range in which scrolled items are visible.</summary>

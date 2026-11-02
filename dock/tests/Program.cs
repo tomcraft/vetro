@@ -250,7 +250,7 @@ namespace Launcher.Tests
                 T.Eq(l.IconBox(5, 0f, 0f, 0).W, DockLayout.Icon, "rest size reached");
             });
 
-            T.Run("layout: the label stays under the focused icon; the clock yields", () =>
+            T.Run("layout: the label stays under the focused icon", () =>
             {
                 foreach (int n in new[] { 5, 13, 30 })
                 {
@@ -265,22 +265,12 @@ namespace Launcher.Tests
                         {
                             if (w > l.PillW - 2 * DockLayout.PadX) continue;
                             int x = l.LabelLeft(p, sc, w);
-                            // whatever the neighbourhood of the clock, a label that fits is still under its icon
                             T.True(Math.Abs((x + w / 2) - iconCx) <= DockLayout.FocusIcon / 2 || x == l.Left + DockLayout.PadX || x + w == l.Left + l.PillW - DockLayout.PadX,
                                 "label centre under the icon (or pinned to the pill edge) n=" + n + " p=" + p + " w=" + w);
                             T.True(x >= l.Left + DockLayout.PadX && x + w <= l.Left + l.PillW - DockLayout.PadX, "label inside the pill n=" + n + " w=" + w);
-                            // the clock is the one that gives way: shown only when the two boxes do not touch
-                            bool clear = l.ClockClear(x, w, 62);
-                            bool touches = x + w + DockLayout.ClockGap > l.ClockRight - 62;
-                            T.Eq(clear, !touches, "clock hides exactly when it would touch the label n=" + n + " w=" + w);
                         }
                     }
-                    T.True(l.ClockRight <= l.Left + l.PillW - DockLayout.PadX, "clock inside the pill");
                 }
-                // a label under an early item leaves the clock alone; the last item's long label hides it
-                var apps = new DockLayout(13, 1920, 1080);
-                T.True(apps.ClockClear(apps.LabelLeft(0, 0f, 100), 100, 62), "first item: clock shown");
-                T.True(!apps.ClockClear(apps.LabelLeft(12, apps.ScrollFor(12f), 150), 150, 62), "last item with a long label: clock hidden");
             });
 
             T.Run("controller: panel page keys", () =>
@@ -409,6 +399,34 @@ namespace Launcher.Tests
                 l.GlowAt(99f, out g1, out g2, out gw); T.True(g1 == l.Count - 1 && g2 == g1 && gw == 0f, "past the end: last icon, no second glow");
                 // the glow's box on an icon never depends on the focus: it does not travel
                 T.Eq(l.GlowBox(3, 0f, 0).X, l.GlowBox(3, 0f, 0).X, "glow box depends only on the item");
+            });
+
+            T.Run("layout: clock capsule stays above Apps without changing Sources", () =>
+            {
+                foreach (bool raised in new[] { false, true })
+                foreach (int n in new[] { 2, 5, 13, 30 })
+                {
+                    var l = new DockLayout(n, 1920, 1080, 0, raised, -1);
+                    T.Eq(l.ShowClock, Design.ShowClock && !raised, "clock is apps-only");
+                    T.Eq(DockLayout.LabelRow, Design.ShowLabels ? DockLayout.LabelGap + DockLayout.LabelH : 0, "no bottom row for clock");
+                    if (l.ShowClock)
+                    {
+                        T.True(l.ClockTop(0) >= 0, "clock stays in the window");
+                        T.True(l.ClockTop(0) + DockLayout.ClockCapsuleH < l.Top, "clock stays above icons");
+                        int hintX;
+                        T.True(l.TryPlaceClock(70, 80, out hintX), "both fit in the upper band");
+                        T.True(hintX >= l.ViewLeft && hintX + 70 + DockLayout.ClockGap <= l.ClockRight - 80, "hint stays inside the bar and keeps its gap");
+                        int longHint = l.ClockRight - l.ViewLeft;
+                        T.True(!l.TryPlaceClock(longHint, 100, out hintX), "clock yields when the hint needs the full band");
+                        T.Eq(hintX, l.HintLeft(longHint), "long hint stays centred");
+                    }
+                    else
+                    {
+                        int hintX;
+                        T.True(!l.TryPlaceClock(110, 100, out hintX), "page without a clock");
+                        T.Eq(hintX, l.HintLeft(110), "page without a clock keeps its hint");
+                    }
+                }
             });
 
             T.Run("layout: highlight and label are never cut or crowd the pill edge", () =>
