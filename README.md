@@ -219,3 +219,13 @@ the widget package. Missing or invalid custom files fall back to Samsung artwork
 when available, then to the generic source icon. Custom profiles never insert
 ports absent from the native Home row; their images follow the independent
 HDMI source images preference.
+
+### Additional launcher apps
+
+**Add apps missing from Samsung Home** is off by default: a readable Home row
+is reproduced without appending other registry apps, regardless of which Home
+component stores it. Turn it on to append other visible registry apps alphabetically
+after the native row, for example when a firmware exposes only a recent-app strip.
+With no readable row, the registry remains the fallback. The choice is saved on
+the TV and reverts if rebuilding the launcher fails. It does not install, hide or
+disable applications in Samsung Home.
