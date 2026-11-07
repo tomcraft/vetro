@@ -115,7 +115,7 @@ internal static class SamsungTvRemoteInputAgent
                     definition,
                     0,
                     UinputNameBytes,
-                    source.Name);
+                    source.Name + " (Vetro)");
                 WriteUInt16(definition, 80, source.Bus == 0 ? (ushort)6 : source.Bus);
                 WriteUInt16(definition, 82, source.Vendor);
                 WriteUInt16(definition, 84, source.Product);
